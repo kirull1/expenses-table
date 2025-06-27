@@ -52,7 +52,7 @@ export const useGoogleSheets = () => {
       
       // Assuming categories are in a sheet named 'Categories' in column A
       const response = await axios.get(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Categories!A2:A`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Справочники!B2:B`,
         { 
           params: { 
             key: apiKey 
