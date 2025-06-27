@@ -8,7 +8,7 @@ React-приложение для добавления расходов в Googl
 - Material-UI (MUI) v5 для UI
 - Axios для HTTP-запросов
 - Formik + Yup для валидации форм
-- Vite для сборки
+- Webpack для сборки
 - React Router DOM для роутинга
 - Framer Motion для анимаций
 
@@ -36,8 +36,8 @@ React-приложение для добавления расходов в Googl
 
 3. Создать файл `.env` в корне проекта и добавить следующие переменные:
    ```
-   VITE_API_KEY=your_google_api_key_here
-   VITE_SPREADSHEET_ID=your_spreadsheet_id_here
+   API_KEY=your_google_api_key_here
+   SPREADSHEET_ID=your_spreadsheet_id_here
    ```
    
    **Важно**: Приложение работает только с действительными учетными данными Google API.
@@ -50,6 +50,11 @@ React-приложение для добавления расходов в Googl
 5. Для сборки production-версии:
    ```bash
    npm run build
+   ```
+
+6. Для запуска production-версии локально:
+   ```bash
+   npm run serve
    ```
 
 ## Структура Google Таблицы

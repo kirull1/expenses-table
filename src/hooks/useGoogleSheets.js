@@ -2,9 +2,9 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 // Service account credentials
-const SERVICE_ACCOUNT_EMAIL = import.meta.env.VITE_SERVICE_ACCOUNT_EMAIL || '';
-const SERVICE_ACCOUNT_PRIVATE_KEY = import.meta.env.VITE_SERVICE_ACCOUNT_PRIVATE_KEY || '';
-const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID || '';
+const SERVICE_ACCOUNT_EMAIL = process.env.SERVICE_ACCOUNT_EMAIL || '';
+const SERVICE_ACCOUNT_PRIVATE_KEY = process.env.SERVICE_ACCOUNT_PRIVATE_KEY || '';
+const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '';
 
 console.log("SERVICE_ACCOUNT_EMAIL", SERVICE_ACCOUNT_EMAIL);
 console.log("SERVICE_ACCOUNT_PRIVATE_KEY", SERVICE_ACCOUNT_PRIVATE_KEY);
@@ -30,9 +30,9 @@ export const useGoogleSheets = () => {
   // Эффект для получения API ключа
   useEffect(() => {
     // Проверяем наличие API ключа
-    const key = import.meta.env.VITE_API_KEY || '';
+    const key = process.env.API_KEY || '';
     if (!key) {
-      setError('API ключ не настроен. Пожалуйста, добавьте VITE_API_KEY в файл .env');
+      setError('API ключ не настроен. Пожалуйста, добавьте API_KEY в файл .env');
       return;
     }
     setApiKey(key);
