@@ -1,18 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-const API_KEY = import.meta.env.VITE_API_KEY || '';
+// Service account credentials
+const SERVICE_ACCOUNT_EMAIL = import.meta.env.VITE_SERVICE_ACCOUNT_EMAIL || '';
+const SERVICE_ACCOUNT_PRIVATE_KEY = import.meta.env.VITE_SERVICE_ACCOUNT_PRIVATE_KEY || '';
 const SPREADSHEET_ID = import.meta.env.VITE_SPREADSHEET_ID || '';
 
-// Тестовые данные для демонстрации интерфейса
-const TEST_CATEGORIES = ['Продукты', 'Транспорт', 'Развлечения', 'Коммунальные услуги', 'Одежда', 'Рестораны', 'Здоровье', 'Образование', 'Путешествия'];
-const TEST_AUTHORS = ['Иван', 'Мария', 'Алексей', 'Екатерина', 'Дмитрий'];
+console.log("SERVICE_ACCOUNT_EMAIL", SERVICE_ACCOUNT_EMAIL);
+console.log("SERVICE_ACCOUNT_PRIVATE_KEY", SERVICE_ACCOUNT_PRIVATE_KEY);
+console.log("SPREADSHEET_ID", SPREADSHEET_ID);
 
 /**
- * Проверяет, используются ли фиктивные ключи API
+ * Проверяет, настроены ли учетные данные
  */
-const isUsingDummyKeys = () => {
-  return API_KEY === 'dummy_api_key' || SPREADSHEET_ID === 'dummy_spreadsheet_id' || !API_KEY || !SPREADSHEET_ID;
+const hasValidCredentials = () => {
+  return SPREADSHEET_ID && SPREADSHEET_ID.length > 0;
 };
 
 /**
@@ -23,72 +25,94 @@ export const useGoogleSheets = () => {
   const [authors, setAuthors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [apiKey, setApiKey] = useState('');
+
+  // Эффект для получения API ключа
+  useEffect(() => {
+    // Проверяем наличие API ключа
+    const key = import.meta.env.VITE_API_KEY || '';
+    if (!key) {
+      setError('API ключ не настроен. Пожалуйста, добавьте VITE_API_KEY в файл .env');
+      return;
+    }
+    setApiKey(key);
+  }, []);
 
   /**
-   * Fetches categories from Google Sheet or returns test data
+   * Fetches categories from Google Sheet
    */
   const fetchCategories = useCallback(async () => {
-    // Если используются фиктивные ключи, возвращаем тестовые данные
-    if (isUsingDummyKeys()) {
-      console.log('Используются тестовые категории (фиктивные ключи API)');
-      setCategories(TEST_CATEGORIES);
+    if (!hasValidCredentials()) {
+      setError('Отсутствуют необходимые учетные данные. Пожалуйста, проверьте настройки в файле .env');
       return;
     }
 
     try {
       setLoading(true);
+      
       // Assuming categories are in a sheet named 'Categories' in column A
       const response = await axios.get(
         `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Categories!A2:A`,
-        { params: { key: API_KEY } }
+        { 
+          params: { 
+            key: apiKey 
+          }
+        }
       );
 
       if (response.data && response.data.values) {
         // Flatten the 2D array to 1D
         const categoryList = response.data.values.map(row => row[0]).filter(Boolean);
         setCategories(categoryList);
+      } else {
+        setError('Категории не найдены в таблице');
       }
-      setError(null);
     } catch (err) {
       setError('Ошибка при загрузке категорий: ' + err.message);
       console.error('Error fetching categories:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apiKey]);
 
   /**
-   * Fetches authors from Google Sheet or returns test data
+   * Fetches authors from Google Sheet
    */
   const fetchAuthors = useCallback(async () => {
-    // Если используются фиктивные ключи, возвращаем тестовые данные
-    if (isUsingDummyKeys()) {
-      console.log('Используются тестовые авторы (фиктивные ключи API)');
-      setAuthors(TEST_AUTHORS);
+    if (!hasValidCredentials()) {
+      setError('Отсутствуют необходимые учетные данные. Пожалуйста, проверьте настройки в файле .env');
       return;
     }
 
     try {
       setLoading(true);
+      
       // Assuming authors are in a sheet named 'Authors' in column A
       const response = await axios.get(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Authors!A2:A`,
-        { params: { key: API_KEY } }
+        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Справочники!E2:E`,
+        { 
+          params: { 
+            key: apiKey 
+          }
+        }
       );
+
+      console.log("Fetch authors response:", response.data.values);
 
       if (response.data && response.data.values) {
         // Flatten the 2D array to 1D
         const authorList = response.data.values.map(row => row[0]).filter(Boolean);
         setAuthors(authorList);
+      } else {
+        setError('Авторы не найдены в таблице');
       }
-      setError(null);
     } catch (err) {
       setError('Ошибка при загрузке авторов: ' + err.message);
       console.error('Error fetching authors:', err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [apiKey]);
 
   /**
    * Submits expense data to Google Sheet
@@ -96,18 +120,8 @@ export const useGoogleSheets = () => {
    * @returns {Promise} - Promise that resolves when data is submitted
    */
   const submitExpense = async (expenseData) => {
-    // Если используются фиктивные ключи, имитируем успешную отправку
-    if (isUsingDummyKeys()) {
-      console.log('Тестовый режим: данные не отправляются в Google Sheets');
-      console.log('Данные расхода:', expenseData);
-      
-      // Имитируем задержку сети
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      return { 
-        success: true, 
-        message: 'Тестовый режим: данные успешно обработаны (но не отправлены в Google Sheets)' 
-      };
+    if (!hasValidCredentials()) {
+      throw new Error('Отсутствуют необходимые учетные данные. Пожалуйста, проверьте настройки в файле .env');
     }
 
     setLoading(true);
@@ -127,7 +141,7 @@ export const useGoogleSheets = () => {
           params: {
             valueInputOption: 'USER_ENTERED',
             insertDataOption: 'INSERT_ROWS',
-            key: API_KEY
+            key: apiKey
           }
         }
       );
@@ -143,11 +157,14 @@ export const useGoogleSheets = () => {
     }
   };
 
-  // Load categories and authors on mount
+  // Load categories and authors when apiKey is available
   useEffect(() => {
-    fetchCategories();
-    fetchAuthors();
-  }, [fetchCategories, fetchAuthors]);
+    console.log("Fetching categories and authors");
+    if (apiKey && hasValidCredentials()) {
+      fetchCategories();
+      fetchAuthors();
+    }
+  }, [apiKey, fetchCategories, fetchAuthors]);
 
   return {
     categories,
@@ -159,6 +176,6 @@ export const useGoogleSheets = () => {
       fetchCategories();
       fetchAuthors();
     },
-    isTestMode: isUsingDummyKeys()
+    isTestMode: false // Всегда в рабочем режиме
   };
 }; 

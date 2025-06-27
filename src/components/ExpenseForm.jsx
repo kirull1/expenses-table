@@ -21,11 +21,13 @@ import { useGoogleSheets } from '../hooks/useGoogleSheets';
 import { expenseFormSchema } from '../utils/validators';
 import { formatDateForSheet } from '../utils/dateFormatter';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
-import InfoIcon from '@mui/icons-material/Info';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 const ExpenseForm = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+  console.log("ExpenseForm rendered");
   const { categories, authors, loading: apiLoading, error: apiError, submitExpense, isTestMode } = useGoogleSheets();
   
   const [notification, setNotification] = useState({
@@ -61,9 +63,7 @@ const ExpenseForm = () => {
       // Show success notification
       setNotification({
         open: true,
-        message: isTestMode 
-          ? 'Расход успешно добавлен (тестовый режим)' 
-          : 'Расход успешно добавлен!',
+        message: 'Расход успешно добавлен!',
         severity: 'success'
       });
       
@@ -150,7 +150,7 @@ const ExpenseForm = () => {
               sx={{ fontSize: 80, mb: 2 }} 
             />
             <Typography variant="h5" color="success.main">
-              {isTestMode ? 'Расход успешно добавлен (тестовый режим)' : 'Расход успешно добавлен!'}
+              Расход успешно добавлен!
             </Typography>
           </motion.div>
         ) : (
@@ -164,27 +164,15 @@ const ExpenseForm = () => {
               Добавление расхода
             </Typography>
             
-            {isTestMode && (
+            {apiError && (
               <Alert 
-                severity="info" 
-                icon={<InfoIcon />}
+                severity="error" 
+                icon={<ErrorOutlineIcon />}
                 sx={{ mb: 3 }}
               >
-                <AlertTitle>Тестовый режим</AlertTitle>
-                Приложение работает в тестовом режиме с демонстрационными данными. Расходы не будут отправлены в Google Sheets.
-                <br />
-                Для полноценной работы укажите действительные API_KEY и SPREADSHEET_ID в файле .env
+                <AlertTitle>Ошибка</AlertTitle>
+                {apiError}
               </Alert>
-            )}
-            
-            {apiError && !isTestMode && (
-              <Card sx={{ mb: 3, bgcolor: 'error.light' }}>
-                <CardContent>
-                  <Typography color="error">
-                    {apiError}
-                  </Typography>
-                </CardContent>
-              </Card>
             )}
             
             <Formik
@@ -213,8 +201,8 @@ const ExpenseForm = () => {
                           name="category"
                           label="Категория"
                           options={categories}
-                          loading={apiLoading && !isTestMode}
-                          disabled={apiLoading && !isTestMode || isSubmitting}
+                          loading={apiLoading}
+                          disabled={apiLoading || isSubmitting || !categories.length}
                         />
                       </Grid>
                       <Grid md={6} lg={6} sm={6} xs={12}>
@@ -234,7 +222,7 @@ const ExpenseForm = () => {
                           name="author"
                           label="Автор"
                           options={authors}
-                          disabled={apiLoading && !isTestMode || isSubmitting}
+                          disabled={apiLoading || isSubmitting || !authors.length}
                         />
                       </Grid>
                       <Grid xs={12}>
@@ -250,7 +238,7 @@ const ExpenseForm = () => {
                           variant="contained"
                           color="primary"
                           size="large"
-                          disabled={isSubmitting || (apiLoading && !isTestMode)}
+                          disabled={isSubmitting || apiLoading || apiError || !categories.length || !authors.length}
                           sx={{
                             minWidth: isMobile ? '100%' : '200px',
                             height: '56px',
