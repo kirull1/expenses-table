@@ -1,6 +1,6 @@
 {
   "short_name": "Expenses",
-  "name": "Expenses Table App",
+  "name": "Expenses Table",
   "icons": [
     {
       "src": "favicon.ico",
@@ -20,7 +20,7 @@
   ],
   "start_url": ".",
   "display": "standalone",
-  "theme_color": "#2196f3",
+  "theme_color": "#000000",
   "background_color": "#ffffff",
   "description": "An application for tracking expenses in Google Sheets",
   "orientation": "portrait-primary",

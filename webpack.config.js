@@ -5,9 +5,135 @@ const CopyPlugin = require('copy-webpack-plugin');
 const { InjectManifest } = require('workbox-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
-const envConfig = require('./webpack.env.js');
+const webpack = require('webpack');
+const dotenv = require('dotenv');
+const fs = require('fs');
+
+// Load environment variables from .env files
+const currentPath = path.join(__dirname);
+const basePath = currentPath + '/.env';
+const envPathLocal = currentPath + '/.env.local';
+const envPathDev = currentPath + '/.env.development';
+const envPathDevLocal = currentPath + '/.env.development.local';
+const envPathProd = currentPath + '/.env.production';
+const envPathProdLocal = currentPath + '/.env.production.local';
+
+// Determine which .env files to load based on environment
+let envFiles = [];
+if (process.env.NODE_ENV === 'production') {
+  // Production environment: .env, .env.production, .env.local (if exists), .env.production.local (if exists)
+  envFiles = [
+    { path: basePath, required: false },
+    { path: envPathProd, required: false },
+    { path: envPathLocal, required: false },
+    { path: envPathProdLocal, required: false }
+  ];
+} else {
+  // Development environment: .env, .env.development, .env.local (if exists), .env.development.local (if exists)
+  envFiles = [
+    { path: basePath, required: false },
+    { path: envPathDev, required: false },
+    { path: envPathLocal, required: false },
+    { path: envPathDevLocal, required: false }
+  ];
+}
+
+// Load all environment variables from the determined files
+const envVars = {};
+let loadedFiles = [];
+
+envFiles.forEach(file => {
+  if (fs.existsSync(file.path)) {
+    const fileEnv = dotenv.config({ path: file.path }).parsed || {};
+    Object.keys(fileEnv).forEach(key => {
+      envVars[key] = fileEnv[key];
+    });
+    loadedFiles.push(file.path);
+    console.log(`Loaded env file: ${file.path}`);
+    console.log(`Variables in ${file.path}:`, Object.keys(fileEnv));
+  } else if (file.required) {
+    throw new Error(`Environment file ${file.path} not found but required!`);
+  }
+});
+
+// Create environment variables to inject into the app
+const envKeys = Object.keys(envVars).reduce((prev, next) => {
+  // Add environment variables
+  prev[`process.env.${next}`] = JSON.stringify(envVars[next]);
+  return prev;
+}, {});
+
+// Add NODE_ENV
+envKeys['process.env.NODE_ENV'] = JSON.stringify(process.env.NODE_ENV || 'development');
+
+console.log(`Environment variables loaded from: ${loadedFiles.join(', ')}`);
+console.log('Environment variables loaded:', Object.keys(envKeys).map(key => key.replace('process.env.', '')));
+
+// For debugging
+console.log('SPREADSHEET_ID value:', envVars.SPREADSHEET_ID);
 
 const isProduction = process.env.NODE_ENV === 'production';
+
+// Custom plugin to inject process polyfill
+class ProcessPolyfillPlugin {
+  apply(compiler) {
+    compiler.hooks.thisCompilation.tap('ProcessPolyfillPlugin', (compilation) => {
+      compilation.hooks.processAssets.tap(
+        {
+          name: 'ProcessPolyfillPlugin',
+          stage: webpack.Compilation.PROCESS_ASSETS_STAGE_ADDITIONS,
+        },
+        (assets) => {
+          const polyfill = `
+            // Process polyfill
+            window.process = window.process || {};
+            window.process.env = window.process.env || {};
+          `;
+          
+          // Inject polyfill at the beginning of each JS file
+          Object.keys(assets).forEach(filename => {
+            if (filename.endsWith('.js')) {
+              const asset = assets[filename];
+              const source = asset.source();
+              const newSource = polyfill + source;
+              compilation.updateAsset(filename, new webpack.sources.RawSource(newSource));
+            }
+          });
+        }
+      );
+    });
+  }
+}
+
+// Custom plugin to replace environment variables in HTML
+class ReplaceHtmlEnvPlugin {
+  constructor(env) {
+    this.env = env;
+  }
+
+  apply(compiler) {
+    // Use HtmlWebpackPlugin hooks instead
+    const HtmlWebpackPlugin = require('html-webpack-plugin');
+    
+    compiler.hooks.compilation.tap('ReplaceHtmlEnvPlugin', (compilation) => {
+      // Static Plugin interface |compilation |HOOK NAME | register listener 
+      HtmlWebpackPlugin.getHooks(compilation).beforeEmit.tapAsync(
+        'ReplaceHtmlEnvPlugin', // <-- Set a meaningful name here for stacktraces
+        (data, cb) => {
+          // Replace environment variables in HTML
+          Object.keys(this.env).forEach(key => {
+            const placeholder = `%${key}%`;
+            const value = this.env[key] || '';
+            data.html = data.html.replace(new RegExp(placeholder, 'g'), value);
+          });
+          
+          // Tell webpack to move on
+          cb(null, data);
+        }
+      );
+    });
+  }
+}
 
 module.exports = {
   mode: isProduction ? 'production' : 'development',
@@ -39,7 +165,15 @@ module.exports = {
     },
     headers: {
       'Access-Control-Allow-Origin': '*',
-    }
+    },
+    proxy: [
+      {
+        context: ['/api'],
+        target: 'http://localhost:4000',
+        secure: false,
+        changeOrigin: true
+      }
+    ]
   },
   optimization: {
     minimize: isProduction,
@@ -129,12 +263,29 @@ module.exports = {
     ]
   },
   resolve: {
-    extensions: ['.js', '.jsx']
+    extensions: ['.js', '.jsx'],
+    fallback: {
+      "path": false,
+      "fs": false,
+      "os": false,
+      "util": false
+    }
   },
   plugins: [
+    // Custom process polyfill plugin
+    new ProcessPolyfillPlugin(),
+    
+    // Define global process.env
+    new webpack.DefinePlugin({
+      ...envKeys,
+      // Ensure these are always available
+      'process.env': JSON.stringify({}),
+      'process.env.SPREADSHEET_ID': JSON.stringify(envVars.SPREADSHEET_ID || ''),
+      'process.env.SERVICE_ACCOUNT_EMAIL': JSON.stringify(envVars.SERVICE_ACCOUNT_EMAIL || '')
+    }),
     new HtmlWebpackPlugin({
       template: './index.html',
-      favicon: './public/vite.svg',
+      favicon: './public/vite.svg', // Using vite.svg as favicon
       inject: true,
       minify: isProduction ? {
         removeComments: true,
@@ -149,6 +300,11 @@ module.exports = {
         minifyURLs: true,
       } : false
     }),
+    // Custom plugin to replace environment variables in HTML
+    new ReplaceHtmlEnvPlugin({
+      SPREADSHEET_ID: envVars.SPREADSHEET_ID || '',
+      SERVICE_ACCOUNT_EMAIL: envVars.SERVICE_ACCOUNT_EMAIL || ''
+    }),
     new CopyPlugin({
       patterns: [
         { 
@@ -159,8 +315,7 @@ module.exports = {
           }
         }
       ],
-    }),
-    ...envConfig().plugins
+    })
   ].concat(isProduction ? [
     new MiniCssExtractPlugin({
       filename: 'assets/[name].[contenthash].css',

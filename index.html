@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#2196f3" />
-    <meta name="description" content="Приложение для учета расходов в Google Таблицах" />
-    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="description" content="Учет расходов" />
     <link rel="apple-touch-icon" href="/logo192.png" />
+    <link rel="manifest" href="/manifest.json" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -15,9 +15,29 @@
       href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600;700&display=swap"
     />
     <title>Учет расходов</title>
+    <script>
+      // Process polyfill
+      window.process = window.process || {};
+      window.process.env = window.process.env || {};
+      
+      // Inject environment variables directly
+      window.ENV_VARS = {
+        SPREADSHEET_ID: "%SPREADSHEET_ID%",
+        SERVICE_ACCOUNT_EMAIL: "%SERVICE_ACCOUNT_EMAIL%"
+      };
+      
+      // Copy to process.env for compatibility
+      if (window.ENV_VARS.SPREADSHEET_ID && window.ENV_VARS.SPREADSHEET_ID !== "%SPREADSHEET_ID%") {
+        window.process.env.SPREADSHEET_ID = window.ENV_VARS.SPREADSHEET_ID;
+      }
+      if (window.ENV_VARS.SERVICE_ACCOUNT_EMAIL && window.ENV_VARS.SERVICE_ACCOUNT_EMAIL !== "%SERVICE_ACCOUNT_EMAIL%") {
+        window.process.env.SERVICE_ACCOUNT_EMAIL = window.ENV_VARS.SERVICE_ACCOUNT_EMAIL;
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
     <noscript>Для работы приложения необходимо включить JavaScript.</noscript>
+    <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

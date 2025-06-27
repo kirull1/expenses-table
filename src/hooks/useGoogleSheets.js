@@ -1,21 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-// Service account credentials
-const SERVICE_ACCOUNT_EMAIL = process.env.SERVICE_ACCOUNT_EMAIL || '';
-const SERVICE_ACCOUNT_PRIVATE_KEY = process.env.SERVICE_ACCOUNT_PRIVATE_KEY || '';
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '';
-
-console.log("SERVICE_ACCOUNT_EMAIL", SERVICE_ACCOUNT_EMAIL);
-console.log("SERVICE_ACCOUNT_PRIVATE_KEY", SERVICE_ACCOUNT_PRIVATE_KEY);
-console.log("SPREADSHEET_ID", SPREADSHEET_ID);
-
-/**
- * Проверяет, настроены ли учетные данные
- */
-const hasValidCredentials = () => {
-  return SPREADSHEET_ID && SPREADSHEET_ID.length > 0;
+// Получаем переменные окружения из window.ENV_VARS или process.env
+const getEnvVar = (name) => {
+  if (window.ENV_VARS && window.ENV_VARS[name]) {
+    return window.ENV_VARS[name];
+  }
+  if (window.process && window.process.env && window.process.env[name]) {
+    return window.process.env[name];
+  }
+  return '';
 };
+
+// Configuration - read from environment variables
+const SPREADSHEET_ID = getEnvVar('SPREADSHEET_ID');
+
+// For debugging
+console.log("SPREADSHEET_ID available:", !!SPREADSHEET_ID);
 
 /**
  * Custom hook for Google Sheets API integration
@@ -25,109 +26,137 @@ export const useGoogleSheets = () => {
   const [authors, setAuthors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [apiKey, setApiKey] = useState('');
+  const [accessToken, setAccessToken] = useState(null);
+  const [spreadsheetId, setSpreadsheetId] = useState(SPREADSHEET_ID);
 
-  // Эффект для получения API ключа
+  // Try to get environment variables from API if not available in client
   useEffect(() => {
-    // Проверяем наличие API ключа
-    const key = process.env.API_KEY || '';
-    if (!key) {
-      setError('API ключ не настроен. Пожалуйста, добавьте API_KEY в файл .env');
-      return;
+    if (!spreadsheetId) {
+      const fetchEnvVars = async () => {
+        try {
+          const response = await axios.get('/api/env-info');
+          if (response.data && response.data.SPREADSHEET_ID) {
+            console.log("Got SPREADSHEET_ID from API:", response.data.SPREADSHEET_ID);
+            setSpreadsheetId(response.data.SPREADSHEET_ID);
+          }
+        } catch (err) {
+          console.error("Error fetching env vars from API:", err);
+        }
+      };
+      
+      fetchEnvVars();
     }
-    setApiKey(key);
+  }, [spreadsheetId]);
+
+  // Function to get access token
+  const getAccessToken = useCallback(async () => {
+    try {
+      const response = await axios.post('/api/auth/google-token');
+      return response.data.access_token;
+    } catch (err) {
+      console.error('Error getting access token:', err);
+      setError('Error getting access token: ' + err.message);
+      return null;
+    }
   }, []);
+
+  // Initialize access token
+  useEffect(() => {
+    const initToken = async () => {
+      const token = await getAccessToken();
+      if (token) {
+        setAccessToken(token);
+      }
+    };
+
+    if (spreadsheetId) {
+      console.log("Initializing token with spreadsheetId:", spreadsheetId);
+      initToken();
+    } else {
+      setError('Missing spreadsheet ID. Please check your .env file settings.');
+    }
+  }, [getAccessToken, spreadsheetId]);
 
   /**
    * Fetches categories from Google Sheet
    */
   const fetchCategories = useCallback(async () => {
-    if (!hasValidCredentials()) {
-      setError('Отсутствуют необходимые учетные данные. Пожалуйста, проверьте настройки в файле .env');
-      return;
-    }
+    if (!accessToken || !spreadsheetId) return;
 
     try {
       setLoading(true);
       
-      // Assuming categories are in a sheet named 'Categories' in column A
       const response = await axios.get(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Справочники!B2:B`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Справочники!B2:B`,
         { 
-          params: { 
-            key: apiKey 
+          headers: {
+            Authorization: `Bearer ${accessToken}`
           }
         }
       );
 
       if (response.data && response.data.values) {
-        // Flatten the 2D array to 1D
         const categoryList = response.data.values.map(row => row[0]).filter(Boolean);
         setCategories(categoryList);
       } else {
-        setError('Категории не найдены в таблице');
+        setCategories([]);
       }
     } catch (err) {
-      setError('Ошибка при загрузке категорий: ' + err.message);
       console.error('Error fetching categories:', err);
+      setCategories([]);
     } finally {
       setLoading(false);
     }
-  }, [apiKey]);
+  }, [accessToken, spreadsheetId]);
 
   /**
    * Fetches authors from Google Sheet
    */
   const fetchAuthors = useCallback(async () => {
-    if (!hasValidCredentials()) {
-      setError('Отсутствуют необходимые учетные данные. Пожалуйста, проверьте настройки в файле .env');
-      return;
-    }
+    if (!accessToken || !spreadsheetId) return;
 
     try {
       setLoading(true);
       
-      // Assuming authors are in a sheet named 'Authors' in column A
       const response = await axios.get(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Справочники!E2:E`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Справочники!E2:E`,
         { 
-          params: { 
-            key: apiKey 
+          headers: {
+            Authorization: `Bearer ${accessToken}`
           }
         }
       );
 
-      console.log("Fetch authors response:", response.data.values);
-
       if (response.data && response.data.values) {
-        // Flatten the 2D array to 1D
         const authorList = response.data.values.map(row => row[0]).filter(Boolean);
         setAuthors(authorList);
       } else {
-        setError('Авторы не найдены в таблице');
+        setAuthors([]);
       }
     } catch (err) {
-      setError('Ошибка при загрузке авторов: ' + err.message);
       console.error('Error fetching authors:', err);
+      setAuthors([]);
     } finally {
       setLoading(false);
     }
-  }, [apiKey]);
+  }, [accessToken, spreadsheetId]);
 
   /**
    * Submits expense data to Google Sheet
-   * @param {Object} expenseData - The expense data to submit
-   * @returns {Promise} - Promise that resolves when data is submitted
    */
   const submitExpense = async (expenseData) => {
-    if (!hasValidCredentials()) {
-      throw new Error('Отсутствуют необходимые учетные данные. Пожалуйста, проверьте настройки в файле .env');
+    if (!accessToken) {
+      throw new Error('Access token not initialized');
+    }
+
+    if (!spreadsheetId) {
+      throw new Error('Spreadsheet ID not available');
     }
 
     setLoading(true);
     try {
       const response = await axios.post(
-        `https://sheets.googleapis.com/v4/spreadsheets/${SPREADSHEET_ID}/values/Расходы!A1:append`,
+        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Расходы!A1:append`,
         {
           values: [[
             expenseData.date,
@@ -138,10 +167,13 @@ export const useGoogleSheets = () => {
           ]]
         },
         {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
           params: {
             valueInputOption: 'USER_ENTERED',
-            insertDataOption: 'INSERT_ROWS',
-            key: apiKey
+            insertDataOption: 'INSERT_ROWS'
           }
         }
       );
@@ -149,7 +181,7 @@ export const useGoogleSheets = () => {
       setError(null);
       return response.data;
     } catch (err) {
-      setError('Ошибка при отправке данных: ' + err.message);
+      setError('Error submitting data: ' + err.message);
       console.error('Error submitting expense:', err);
       throw err;
     } finally {
@@ -157,14 +189,13 @@ export const useGoogleSheets = () => {
     }
   };
 
-  // Load categories and authors when apiKey is available
+  // Load categories and authors when access token is available
   useEffect(() => {
-    console.log("Fetching categories and authors");
-    if (apiKey && hasValidCredentials()) {
+    if (accessToken && spreadsheetId) {
       fetchCategories();
       fetchAuthors();
     }
-  }, [apiKey, fetchCategories, fetchAuthors]);
+  }, [accessToken, spreadsheetId, fetchCategories, fetchAuthors]);
 
   return {
     categories,
@@ -176,6 +207,7 @@ export const useGoogleSheets = () => {
       fetchCategories();
       fetchAuthors();
     },
-    isTestMode: false // Всегда в рабочем режиме
+    isTestMode: false,
+    spreadsheetId
   };
 }; 
