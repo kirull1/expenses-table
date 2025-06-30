@@ -19,8 +19,8 @@ export const expenseFormSchema = Yup.object().shape({
     .positive('Стоимость должна быть положительной')
     .min(0.01, 'Минимальная стоимость 0.01'),
   comment: Yup.string()
-    .required('Введите комментарий')
     .max(500, 'Комментарий слишком длинный'),
   author: Yup.string()
-    .required('Выберите автора')
+  .required('Выберите автора')
+  .default('-')
 }); 

@@ -173,7 +173,7 @@ export const useGoogleSheets = () => {
           },
           params: {
             valueInputOption: 'USER_ENTERED',
-            insertDataOption: 'INSERT_ROWS'
+            insertDataOption: 'OVERWRITE'
           }
         }
       );

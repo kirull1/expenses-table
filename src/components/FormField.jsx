@@ -1,8 +1,16 @@
-import React from 'react';
-import { TextField, Autocomplete, FormControl, FormHelperText, InputLabel, Select, MenuItem } from '@mui/material';
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
-import { useField } from 'formik';
-import { motion } from 'framer-motion';
+import React from "react";
+import {
+  TextField,
+  Autocomplete,
+  FormControl,
+  FormHelperText,
+  InputLabel,
+  Select,
+  MenuItem,
+} from "@mui/material";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
+import { useField } from "formik";
+import { motion } from "framer-motion";
 
 /**
  * Reusable form field component that wraps various MUI input types
@@ -10,23 +18,23 @@ import { motion } from 'framer-motion';
 const FormField = ({ type, name, label, options = [], ...props }) => {
   const [field, meta, helpers] = useField(name);
   const isError = meta.touched && !!meta.error;
-  const helperText = isError ? meta.error : '';
+  const helperText = isError ? meta.error : "";
 
   // Animation variants for field
   const fieldVariants = {
     hidden: { opacity: 0, y: 10 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
   };
 
   // Render different input types based on the type prop
   switch (type) {
-    case 'date':
+    case "date":
       return (
         <motion.div
           variants={fieldVariants}
           initial="hidden"
           animate="visible"
-          style={{ width: '100%', marginBottom: '16px' }}
+          style={{ width: "100%", marginBottom: "16px" }}
         >
           <DatePicker
             label={label}
@@ -38,21 +46,21 @@ const FormField = ({ type, name, label, options = [], ...props }) => {
                 error: isError,
                 helperText: helperText,
                 onBlur: field.onBlur,
-                name: field.name
-              }
+                name: field.name,
+              },
             }}
             {...props}
           />
         </motion.div>
       );
 
-    case 'autocomplete':
+    case "autocomplete":
       return (
         <motion.div
           variants={fieldVariants}
           initial="hidden"
           animate="visible"
-          style={{ width: '100%', marginBottom: '16px' }}
+          style={{ width: "100%", marginBottom: "16px", minWidth: "160px" }}
         >
           <Autocomplete
             options={options}
@@ -74,13 +82,13 @@ const FormField = ({ type, name, label, options = [], ...props }) => {
         </motion.div>
       );
 
-    case 'select':
+    case "select":
       return (
         <motion.div
           variants={fieldVariants}
           initial="hidden"
           animate="visible"
-          style={{ width: '100%', marginBottom: '16px' }}
+          style={{ width: "100%", marginBottom: "16px", minWidth: "160px" }}
         >
           <FormControl fullWidth error={isError}>
             <InputLabel id={`${name}-label`}>{label}</InputLabel>
@@ -102,13 +110,13 @@ const FormField = ({ type, name, label, options = [], ...props }) => {
         </motion.div>
       );
 
-    case 'textarea':
+    case "textarea":
       return (
         <motion.div
           variants={fieldVariants}
           initial="hidden"
           animate="visible"
-          style={{ width: '100%', marginBottom: '16px' }}
+          style={{ width: "100%", marginBottom: "16px", minWidth: "160px" }}
         >
           <TextField
             {...field}
@@ -129,7 +137,7 @@ const FormField = ({ type, name, label, options = [], ...props }) => {
           variants={fieldVariants}
           initial="hidden"
           animate="visible"
-          style={{ width: '100%', marginBottom: '16px' }}
+          style={{ width: "100%", marginBottom: "16px" }}
         >
           <TextField
             {...field}
@@ -145,4 +153,4 @@ const FormField = ({ type, name, label, options = [], ...props }) => {
   }
 };
 
-export default FormField; 
+export default FormField;
