@@ -3,8 +3,11 @@ import { ThemeProvider, createTheme, CssBaseline, Box } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 import { ru } from "date-fns/locale";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import ExpenseForm from "./components/ExpenseForm";
+import Login from "./components/Login";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AuthProvider from "./contexts/AuthProvider";
 
 import "./App.css";
 
@@ -68,22 +71,33 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <LocalizationProvider dateAdapter={AdapterDateFns} adapterLocale={ru}>
-        <Router>
-          <Box
-            sx={{
-              width: "100%",
-              minHeight: "100vh",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            <Routes>
-              <Route path="/" element={<ExpenseForm />} />
-            </Routes>
-          </Box>
-        </Router>
+        <AuthProvider>
+          <Router>
+            <Box
+              sx={{
+                width: "100%",
+                minHeight: "100vh",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <ExpenseForm />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Box>
+          </Router>
+        </AuthProvider>
       </LocalizationProvider>
     </ThemeProvider>
   );

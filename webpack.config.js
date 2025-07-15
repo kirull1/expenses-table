@@ -303,15 +303,34 @@ module.exports = {
     // Custom plugin to replace environment variables in HTML
     new ReplaceHtmlEnvPlugin({
       SPREADSHEET_ID: envVars.SPREADSHEET_ID || '',
-      SERVICE_ACCOUNT_EMAIL: envVars.SERVICE_ACCOUNT_EMAIL || ''
+      SERVICE_ACCOUNT_EMAIL: envVars.SERVICE_ACCOUNT_EMAIL || '',
+      BUILD_TIMESTAMP: process.env.BUILD_TIMESTAMP || new Date().toISOString()
     }),
     new CopyPlugin({
       patterns: [
-        { 
-          from: 'public', 
-          to: '', 
+        {
+          from: 'public',
+          to: '',
           globOptions: {
             ignore: ['**/service-worker.js']
+          },
+          // Use transform function to add cache-busting query parameter
+          transform(content, absolutePath) {
+            // Skip manifest.json and other special files
+            if (absolutePath.endsWith('manifest.json') || absolutePath.includes('favicon')) {
+              return content;
+            }
+            
+            // For HTML, CSS, and JS files, we can add a cache-busting comment
+            // This doesn't change the filename but helps with identification
+            const ext = path.extname(absolutePath);
+            if (['.html', '.css', '.js'].includes(ext)) {
+              const timestamp = process.env.BUILD_TIMESTAMP || new Date().getTime();
+              const comment = `/* Build: ${timestamp} */\n`;
+              return Buffer.concat([Buffer.from(comment), content]);
+            }
+            
+            return content;
           }
         }
       ],

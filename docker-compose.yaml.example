@@ -1,0 +1,57 @@
+version: "3.7"
+services:
+  frontend:
+    container_name: nginx
+    platform: linux/amd64
+    image: cr.yandex/crp3olms00pvav1sae1q/expenses/frontend:production
+    environment:
+      # Build timestamp for cache busting (set during deployment)
+      BUILD_TIMESTAMP: "${BUILD_TIMESTAMP:-unknown}"
+    ports:
+      - "80:80"
+    tty: true
+    restart: always
+    depends_on:
+      - server
+  
+  server:
+    container_name: server
+    platform: linux/amd64
+    image: cr.yandex/crp3olms00pvav1sae1q/expenses/server:production
+    # Server port is only exposed internally, accessed through nginx proxy
+    expose:
+      - "4000"
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    environment:
+      # Application settings
+      NODE_ENV: "production"
+      PORT: "4000"
+      
+      # Authentication settings
+      AUTH_USERNAME: "admin"
+      AUTH_PASSWORD_HASH: "$2a$10$Dn6LgZsW2g3ZHIJ7qTozeOOdgZ/Qn9qAKw8F.mySkuPfCVMi2GimC"
+      
+      # JWT configuration
+      JWT_SECRET: "your_very_long_and_secure_random_secret_key_here"
+      JWT_EXPIRES_IN: "1h"
+      
+      # Security settings
+      MAX_LOGIN_ATTEMPTS: "5"
+      LOGIN_WINDOW_MINUTES: "15"
+      
+      # Google Sheets API credentials
+      SPREADSHEET_ID: "1qYY2AjIPocj7QpLsV5KOcyzTXMV-o2ETG2VkqvslpeQ"
+      SERVICE_ACCOUNT_EMAIL: "kirull-bot@kirull.iam.gserviceaccount.com"
+      SERVICE_ACCOUNT_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCXUFF63lxYJndr\nKJ7x8Emk6K3edq0UDohQQXqycXz2BRetEbq3Cf5lLju+9LvnOT6CQnNtNHUJsYG7\nBphOpgNvzSZ4XWm5Id4nZWww8k4AdG70EREUVp902t1avyuZGXipPQlKlLSLO31x\nFoJOlJ1pm3GKTW4L3b3bCPWB2A0Xs6TCRYupnM/BCMVgxoLnhmK6LXYb+RSP7oeU\ntTFQyrMT2Pi/S6VIfvC2ssQsva2qOzuMQ6PswctEpls83FE4nTTgTOqirC9g934n\nOLhyLWgWGe2j2k9k9Lfksq/wGKsBkulntyic4zvC6A8k5ZlWWpmHO9dGa0HfPOZ0\nm242kdSzAgMBAAECggEAI78XSLIgWbjYrGmfxyNPmpRXgv9BW0QlouQdMuvJrCs+\n0SWnmRdU0J1wAug5PeJRqJ8/OpTSc3RKZB8mOypQFIkAJh5XXCOqol79BMExeT0I\ne0NO6CGgsRAFjCsuhxAz57NiLwrbbisjMuSw6xSD7Y+J7rTlIwuDDyxaJ48dZLQw\nTGFk1P+prGEq1ymECM22A+GlinLHNL84yyZ7P36+NeC6wtCshyRtttmWscYjnt/p\np4XagbZ0goxPLpjsHJruLSJF7LSgC4Y8XADyZ4KN20RY6SaDPU3tu6BkvkSQA18k\nsCAvOw28DOZLbaUiX2jM+Dkvkn+9QRuchPihBIRYeQKBgQDNRsUgviXGnLDU2vuV\njjUW87nn9+s2lqm9EYcMYnXIvYr5YRbzEvnhcUK7i8vOeP9Egnr5pXFv9OV27yZo\ntal4zuywOdmQRASz9g4TPC/4XqzsweD+t8C+bOrcCPId4QvwYsqYlWJpYrlDMRI6\nSKFSh47UeL2ktRofRU1E5jjhywKBgQC8tAOvE/eQ7M5Gg8DFguPnn1XtGT5Pva/P\n1re/n2cqmP2R6kgNfhEg19cJV4qUqVerJx/tU3nSgKh7jqH6+OCoN39pbS/mAOi0\nnDUyMhBL6dILbpQscY8pzFZieLfHr6Zc8V2Scp2/aHgjvrTjnMNuhDl1/XNIgksY\nl63ECSrbuQKBgQC18pl9uSywi2gtct/2IrMp4eQRGO0yWH6g5+1E6+ysfly1R/pY\nf6Rez84vf+yo2RShu+mWZ69RZccSEU2BGCvbucWPOed+eNuWS20UXY/DXN93hy2P\neH3uC4psd71rAHNdoaMjdZ1h/bBqPw+B+6iKBz9xUof9esxplTq07D7U2wKBgQCV\nhuNgaScD/NFbSO2I1LX5BOYWsakRkNJuk8sYmZwrQf20EPw1TM8PwliP+4FBWYqx\ngZgn+7yNlAttlNE/yNRkF03r4WxSCihbbWgttUP6k3YwPthE+1shGNzevJ+MKOBf\nx5aJBC+By6tfT6+QqNinizjpCQO/0hbljtNPgqAmaQKBgQCsP4Ln5qPvo3be44+S\nYk7VOpYwaUclVPLgNtvEAekU4C+TexjE25p/W1Pp8DBl8yBNzOgKAW3UM4lIooNB\nUY5cb2vlKpmQzifd/19nRKeEvWuU+f2aoqfdoeUblvDC1Fcv1x4OZ0JV+PDfJD6Y\n4i6taZuwGsWQ1C3nh/PjbuBW3A==\n-----END PRIVATE KEY-----\n"
+    tty: true
+    restart: always
+    volumes:
+      # Mount .env file for additional configuration
+      - ./.env:/app/.env:ro
+
+# Networks (optional - Docker Compose creates default network)
+networks:
+  default:
+    name: expenses-network

@@ -38,6 +38,29 @@
   <body>
     <div id="root"></div>
     <noscript>Для работы приложения необходимо включить JavaScript.</noscript>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.jsx?v=%BUILD_TIMESTAMP%"></script>
+    <!-- Add cache-busting query parameters to other resources -->
+    <script>
+      // Add cache-busting query parameters to all CSS and JS resources
+      document.addEventListener('DOMContentLoaded', function() {
+        const timestamp = document.querySelector('meta[name="build-timestamp"]')?.content || new Date().getTime();
+        const links = document.querySelectorAll('link[rel="stylesheet"]');
+        const scripts = document.querySelectorAll('script[src]');
+        
+        // Add query parameter to CSS files
+        links.forEach(link => {
+          if (link.href && !link.href.includes('?')) {
+            link.href = link.href + '?v=' + timestamp;
+          }
+        });
+        
+        // Add query parameter to JS files
+        scripts.forEach(script => {
+          if (script.src && !script.src.includes('?')) {
+            script.src = script.src + '?v=' + timestamp;
+          }
+        });
+      });
+    </script>
   </body>
 </html>

@@ -1,0 +1,21 @@
+FROM node:20.11.1-alpine
+
+WORKDIR /app
+
+# Copy package files and install dependencies
+COPY package*.json ./
+RUN npm ci
+
+# Copy server files and environment files
+COPY ./server ./server
+COPY .env* ./
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV PORT=4000
+
+# Expose port
+EXPOSE 4000
+
+# Start server
+CMD ["npm", "run", "start"]
