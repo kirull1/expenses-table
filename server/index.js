@@ -164,9 +164,9 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
   
   // Get credentials from environment variables
   const AUTH_USERNAME = process.env.AUTH_USERNAME;
-  const AUTH_PASSWORD_HASH = process.env.AUTH_PASSWORD_HASH;
+  const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
   
-  if (!AUTH_USERNAME || !AUTH_PASSWORD_HASH) {
+  if (!AUTH_USERNAME || !AUTH_PASSWORD) {
     return res.status(500).json({
       success: false,
       message: 'Authentication not configured. Please check server environment variables.'
@@ -185,23 +185,9 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     console.log('Login attempt with username:', username);
     console.log('Expected username:', AUTH_USERNAME);
     console.log('Password length:', password.length);
-    console.log('Stored hash format:', AUTH_PASSWORD_HASH.substring(0, 10) + '...');
+    console.log('Password match:', AUTH_PASSWORD === password);
     
-    // Compare password with stored hash
-    let bcryptResult = false;
-    try {
-      bcryptResult = await bcrypt.compare(password, AUTH_PASSWORD_HASH);
-      console.log('password:', password);
-      console.log('stored hash:', AUTH_PASSWORD_HASH);
-      console.log('generated hash with fixed salt:', bcrypt.hashSync(password, '$2a$10$Dn6LgZsW2g3ZHIJ7qTozeO'));
-      console.log('bcrypt compare result:', bcryptResult);
-    } catch (bcryptError) {
-      console.error('bcrypt error:', bcryptError);
-    }
-    
-    console.log('Password match:', bcryptResult);
-    
-    if (bcryptResult) {
+    if (AUTH_PASSWORD === password) {
       // Generate JWT token
       const user = { username };
       const token = jwt.sign(user, process.env.JWT_SECRET, { expiresIn: process.env.JWT_EXPIRES_IN });
